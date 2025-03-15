@@ -1,0 +1,7 @@
+services:
+  fireworks:
+    build: .
+    volumes:
+      - .:/fireworks
+    env_file:
+      - .env

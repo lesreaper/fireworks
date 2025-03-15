@@ -1,0 +1,88 @@
+[
+    {
+        "file": "License 1.png",
+        "data": {
+            "document_type": "State License",
+            "document_number": "I1234568",
+            "first_name": "Ima",
+            "last_name": "Cordholder",
+            "state": "CA",
+            "sex": "F",
+            "date_of_birth": "1977-08-31",
+            "issue_date": "2009-08-31",
+            "expiration_date": "2014-08-31",
+            "height": "5'05\"",
+            "address": "2570 24TH STREET, ANYTOWN, CA 95818",
+            "hair": "BRN",
+            "eyes": "BRN",
+            "weight": "125 lb",
+            "class": "C"
+          }
+    },
+    {
+        "file": "License-2.jpg",
+        "data": {
+            "document_type": "State License",
+            "document_number": "99999999",
+            "first_name": "Janice",
+            "last_name": "Sample",
+            "state": "PA",
+            "sex": "F",
+            "date_of_birth": "2005-01-07",
+            "issue_date": "2022-01-07",
+            "expiration_date": "2026-01-08",
+            "height": "5'05\"",
+            "address": "123 Main St, Apt. 1, Harrisburg, PA 17101",
+            "eyes": "BLU",
+            "class": "C"
+          }
+    },
+    {
+        "file": "License-3.jpeg",
+        "data": {
+            "document_type": "State License",
+            "document_number": "000123456789",
+            "first_name": "John",
+            "last_name": "Public",
+            "state": "North Carolina",
+            "sex": "M",
+            "date_of_birth": "1952-05-28",
+            "issue_date": "2024-05-28",
+            "expiration_date": "2029-05-28",
+            "height": "5'10\"",
+            "address": "1234 Your Stree, Your City, NC 99999",
+            "hair": "GRY",
+            "eyes": "BRO",
+            "class": "B"
+          }
+    },
+    {
+        "file": "passport-1.jpeg",
+        "data": {
+            "document_type": "Passport",
+            "document_number": "963545637",
+            "first_name": "John",
+            "last_name": "Doe",
+            "state": "CA",
+            "sex": "M",
+            "date_of_birth": "1996-03-15",
+            "issue_date": "2017-04-14",
+            "expiration_date": "2027-04-14"
+          }
+    },
+    {
+        "file": "passport-2.jpg",
+        "data": {
+            "document_type": "Passport",
+            "document_number": "575034801",
+            "first_name": "Benjamin",
+            "last_name": "Franklin",
+            "state": "Massachusetts Bay",
+            "sex": "M",
+            "date_of_birth": "1706-01-17",
+            "issue_date": "2018-01-16",
+            "expiration_date": "2028-01-15"
+          }
+    }
+    
+]
