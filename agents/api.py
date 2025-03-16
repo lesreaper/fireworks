@@ -1,10 +1,9 @@
-
 from fireworks.client import Fireworks
 from typing import Tuple
 import json
 from pydantic import ValidationError
 
-from .models_agents import IdentificationResult, DocTypeResponse, ValidationResponse
+from .types import IdentificationResult, DocTypeResponse, ValidationResponse
 
 import logging
 
@@ -24,14 +23,14 @@ class APIAgentsClient:
             {
                 "type": "image_url",
                 "image_url": {
-                    "url": f"data:image/jpeg;base64,{image_base64}#transform=inline"
+                    "url": f"data:image/jpeg;base64,{image_base64}"
                 }
             },
         ]
         messages = [{"role": "user", "content": message_content}]
 
         response = self.client.chat.completions.create(
-            model="accounts/fireworks/models/llama-v3p3-70b-instruct",
+            model="accounts/fireworks/models/llama-v3p2-90b-vision-instruct",
             messages=messages,
             response_format={
                 "type": "json_object",
@@ -56,7 +55,12 @@ class APIAgentsClient:
         1. If this is a US Passport or Driver's License/State ID
         2. If it's a Driver's License/State ID, identify which state it's from
         3. Your confidence level in this identification (0.0 to 1.0)
-        4. Any additional relevant details about the document type
+        4. Any additional information you can provide, which should include:
+            - Full Name
+            - Date of Birth
+            - Document Number
+            - Sex
+            - Address or Birth Place
 
         Return your analysis in a structured JSON format with the following fields:
         - document_type: either "Passport" or "Driver's License"
@@ -67,19 +71,17 @@ class APIAgentsClient:
 
         message_content = [
             {"type": "text", "text": prompt},
-            {"top_p": 1},
-            {"top_k": 100},
             {
                 "type": "image_url",
                 "image_url": {
-                    "url": f"data:image/jpeg;base64,{image_base64}#transform=inline"
+                    "url": f"data:image/jpeg;base64,{image_base64}"
                 }
             },
         ]
         messages = [{"role": "user", "content": message_content}]
 
         response = self.client.chat.completions.create(
-            model="accounts/fireworks/models/llama-v3p3-70b-instruct",
+            model="accounts/fireworks/models/llama-v3p2-90b-vision-instruct",
             messages=messages,
             response_format={
                 "type": "json_object",

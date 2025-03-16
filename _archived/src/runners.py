@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import openai
 from src.api import APIInlineClient
 from src.prompts import PromptGenerator
-from src.utils import encode_image, FileSaver, preprocess_and_encode_image
+from agents.utils import encode_image, FileSaver, preprocess_and_encode_image
 from eval.eval import evaluate_run
 
 load_dotenv()

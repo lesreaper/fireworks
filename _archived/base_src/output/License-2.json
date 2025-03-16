@@ -1,7 +1,7 @@
 {
   "document_type": "State License",
-  "document_number": "99999999",
-  "first_name": "JANICE",
+  "document_number": "99 999 999",
+  "first_name": "JANICE ANN",
   "last_name": "SAMPLE",
   "state": "PA",
   "sex": "F",
@@ -10,6 +10,8 @@
   "expiration_date": "2026-01-08",
   "height": "5'-05\"",
   "address": "123 MAIN STREET, APT. 1, HARRISBURG, PA 17101-0000",
+  "hair": "",
   "eyes": "BLU",
+  "weight": "",
   "class": "C"
 }

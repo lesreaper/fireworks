@@ -20,31 +20,14 @@ def preprocess_and_encode_image(image_path: str) -> str:
         if img is None:
             raise ValueError(f"Image at {image_path} could not be read.")
 
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        noise_removed = cv2.medianBlur(gray, 3)
-
-        _, thresh = cv2.threshold(noise_removed, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-
-        coords = cv2.findNonZero(thresh)
-        angle = cv2.minAreaRect(coords)[-1]
-        if angle < -45:
-            angle = 90 + angle
-
-        # Rotate image
-        (h, w) = img.shape[:2]
-        center = (w // 2, h // 2)
-        M = cv2.getRotationMatrix2D(center, angle, 1.0)
-        rotated = cv2.warpAffine(img, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-
-        success, buffer = cv2.imencode(".jpg", rotated)
+        # Directly encode the original image to JPEG and then to Base64
+        success, buffer = cv2.imencode(".jpg", img)
         if not success:
             raise ValueError("Could not encode image to JPEG format.")
 
-        image_base64 = base64.b64encode(buffer).decode("utf-8")
-        return image_base64
+        return base64.b64encode(buffer).decode("utf-8")
     except Exception as e:
-        logger.error(f"Error in preprocessing: {str(e)}")
+        logger.error(f"Error in encoding: {str(e)}")
         raise
 
 

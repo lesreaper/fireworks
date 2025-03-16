@@ -1,5 +1,21 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, TypedDict
 from pydantic import BaseModel
+
+
+class State(TypedDict):
+    image_data: str
+    image_path: str
+    doc_type: Optional[str]
+    detected_state: Optional[str]
+    doc_type_confidence: Optional[float]
+    extraction_attempts: int
+    extracted_data: Optional[Dict]
+    validation_status: bool
+    validation_confidence: Optional[float]
+    validation_errors: Optional[Dict[str, str]]
+    suggested_corrections: Optional[Dict[str, Any]]
+    error_message: Optional[str]
+    total_tokens: int
 
 
 class PersonName(BaseModel):
