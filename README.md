@@ -2,6 +2,11 @@
 
 This project demonstrates a few end-to-end proof-of-concepts for extracting structured information from images of U.S. identification documents (drivers licenses, state IDs, and passports) using Fireworks AI.
 
+## To Run
+```
+streamlit run app.py
+```
+
 ## What's Inside
 There are 2 Document Inlining and a JSON Structured Response that are used n the main docker container.
 
