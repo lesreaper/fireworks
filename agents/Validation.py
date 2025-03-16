@@ -1,7 +1,6 @@
 import logging
 from .types import State, IdentificationResult, ValidationResponse
 from .BaseAgent import BaseAgent
-from pydantic import ValidationError
 import json
 
 logging.basicConfig(level=logging.INFO)
@@ -9,151 +8,124 @@ logger = logging.getLogger(__name__)
 
 
 class ValidationAgent(BaseAgent):
+    """Agent for validating extracted information"""
+
     def _transform_data(self, data: dict) -> dict:
-        """Transform extracted data to match IdentificationResult schema"""
-        try:
-            # Handle different name formats
-            if "full_name" in data:
-                name_data = data["full_name"]
-            elif "name" in data:
-                name = data["name"]
-                if isinstance(name, dict):
-                    if "first_name" in name:
-                        name_data = name
-                    else:
-                        # Convert from first/middle/last to first_name/middle_name/last_name
-                        name_data = {
-                            "first_name": name.get("first", ""),
-                            "middle_name": name.get("middle", ""),
-                            "last_name": name.get("last", "")
-                        }
-            else:
-                name_data = {
-                    "first_name": data.get("first_name", ""),
-                    "middle_name": data.get("middle_name", ""),
-                    "last_name": data.get("last_name", "")
-                }
+        """Transform data to match expected schema"""
+        if not data:
+            return data
 
-            # Handle different address formats
-            if "complete_address" in data:
-                address_data = data["complete_address"]
-            elif "address" in data:
-                address_data = data["address"]
-            else:
-                address_data = {
-                    "street": data.get("street", ""),
-                    "city": data.get("city", ""),
-                    "state": data.get("state", ""),
-                    "zip_code": data.get("zip_code", "")
-                }
+        # Create a copy to avoid modifying original
+        transformed = data.copy()
 
-            # Build transformed data
-            transformed = {
-                "document_type": data.get("document_type", ""),
-                "document_number": data.get("document_number", ""),
-                "name": name_data,
-                "date_of_birth": data.get("date_of_birth", ""),
-                "issue_date": data.get("issue_date", ""),
-                "expiry_date": data.get("expiry_date", ""),
-                "address": address_data,
-                "nationality": data.get("nationality", "USA"),  # Default to USA for US documents
-                "state": data.get("state_of_issuance") or data.get("state", "")
-            }
+        # Only add nationality for passports
+        if transformed.get("document_type") == "Passport" and "nationality" not in transformed:
+            transformed["nationality"] = "US"
 
-            logger.info(f"Transformed data: {transformed}")
-            return transformed
-        except Exception as e:
-            logger.error(f"Error transforming data: {str(e)}")
-            raise
+        # Log the transformation
+        logger.info(f"Transformed data: {transformed}")
+        return transformed
 
     def process(self, state: State) -> State:
-        """Validate extracted data with enhanced logging"""
+        """Validate the extracted data"""
         try:
             logger.info("Starting validation with state:")
             logger.info(f"Extracted data to validate: {state.get('extracted_data')}")
 
-            # First, validate with Pydantic
-            if state["extracted_data"]:
-                try:
-                    # Transform data before validation
-                    transformed_data = self._transform_data(state["extracted_data"])
-                    validation_result = IdentificationResult(**transformed_data)
-                    state["extracted_data"] = validation_result.model_dump()  # Update with validated data
-                    basic_validation_passed = True
-                    logger.info("Pydantic validation passed")
-                except ValidationError as e:
-                    basic_validation_passed = False
-                    logger.error(f"Pydantic validation failed: {str(e)}")
-                    state["error_message"] = f"Basic validation error: {str(e)}"
-                    return state
-
-                # If basic validation passes, use LLM for complex validation
-                if basic_validation_passed:
-                    prompt = f"""
-                    Please validate the following extracted identification document data for validity and consistency:
-
-                    {json.dumps(state["extracted_data"], indent=2)}
-
-                    Please verify:
-                    1. All dates are valid and logically consistent (issue date before expiry, etc.)
-                    2. Name formatting is consistent and reasonable
-                    3. Address format is valid (if present)
-                    4. Document numbers follow expected patterns
-                    5. All required fields are present and properly formatted
-
-                    Return your analysis in a structured JSON format with:
-                    - is_valid: boolean indicating if the data appears valid
-                    - confidence: your confidence in this assessment (0.0 to 1.0)
-                    - error_details: map of any found errors
-                    - suggested_corrections: map of suggested fixes for any issues
-                    """
-
-                    response = self.call_validation_api(
-                        prompt=prompt,
-                        response_schema=ValidationResponse.model_json_schema()
-                    )
-                    validation_response = ValidationResponse(**json.loads(response.choices[0].message.content))
-                    tokens = response.usage.total_tokens
-                    state["total_tokens"] += tokens
-
-                    logger.info("LLM Validation results:")
-                    logger.info(f"Validation confidence: {validation_response.confidence}")
-                    logger.info(f"Is valid: {validation_response.is_valid}")
-                    if validation_response.error_details:
-                        logger.info(f"Error details: {validation_response.error_details}")
-                    if validation_response.suggested_corrections:
-                        logger.info(f"Suggested corrections: {validation_response.suggested_corrections}")
-
-                    # Set validation status based on 0.5 confidence threshold
-                    if validation_response.is_valid and validation_response.confidence >= 0.5:
-                        state["validation_status"] = True
-                        state["validation_confidence"] = validation_response.confidence
-                        logger.info(f"Validation passed with confidence: {validation_response.confidence}")
-                    else:
-                        state["validation_status"] = False
-                        state["error_message"] = "LLM validation failed or confidence too low"
-                        state["validation_errors"] = validation_response.error_details
-                        state["suggested_corrections"] = validation_response.suggested_corrections
-                        logger.info(f"Validation failed. Confidence: {validation_response.confidence}")
-
-                    # Log very low confidence validations
-                    if validation_response.confidence < 0.5:
-                        logger.warning(f"Very low confidence in validation: {validation_response.confidence}")
-            else:
+            if not state.get("extracted_data"):
                 logger.error("No data to validate")
                 state["validation_status"] = False
-                state["error_message"] = "No data to validate"
+                state["validation_confidence"] = 0.0
+                return state
 
-            # Log final validation state
+            # Transform data if needed
+            transformed_data = self._transform_data(state["extracted_data"])
+
+            # First, validate with Pydantic
+            try:
+                IdentificationResult(**transformed_data)
+                logger.info("Pydantic validation passed")
+            except Exception as e:
+                logger.error(f"Pydantic validation failed: {str(e)}")
+                state["validation_status"] = False
+                state["validation_confidence"] = 0.0
+                state["validation_errors"] = {"schema_error": str(e)}
+                return state
+
+            # Construct prompt for LLM validation
+            prompt = f"""
+            Please validate this extracted identification document data for accuracy and consistency.
+            This is a {transformed_data.get('document_type', 'unknown document type')}.
+
+            Document Data:
+            {json.dumps(transformed_data, indent=2)}
+
+            Validation Rules:
+            1. For Driver's License:
+               - All dates should be valid and in MM/DD/YYYY format
+               - Name should be in all caps
+               - Address should have street number, street name, city, state code, and ZIP
+               - Document number should be present
+               - State code should be valid US state
+
+            2. For Passport:
+               - All dates should be valid and in MM/DD/YYYY format
+               - Name should be in all caps
+               - Nationality should be present (defaults to "US")
+               - Document number should follow passport format
+               - No address is required
+
+            Return a JSON response with:
+            - is_valid: boolean indicating if all data is valid
+            - confidence: your confidence in the validation (0.0 to 1.0)
+            - error_details: map of field names to error messages (if any)
+            - suggested_corrections: map of field names to suggested fixes
+
+            Note: If your confidence is 0.9 or higher, you should set is_valid to true
+            even if there are minor formatting issues.
+            """
+
+            # Call LLM for validation
+            validation_result, tokens = self.call_validation_api(
+                prompt=prompt,
+                response_schema=ValidationResponse.model_json_schema()
+            )
+
+            # Parse validation response
+            validation = ValidationResponse(**validation_result)
+
+            # Auto-pass if confidence is very high
+            if validation.confidence >= 0.9:
+                logger.info(f"Auto-passing validation due to high confidence: {validation.confidence}")
+                validation.is_valid = True
+                # Convert any errors to warnings if we're auto-passing
+                if validation.error_details:
+                    state["validation_warnings"] = validation.error_details
+                    validation.error_details = None
+
+            # Update state with validation results
+            state["validation_status"] = validation.is_valid
+            state["validation_confidence"] = validation.confidence
+            if validation.error_details:
+                state["validation_errors"] = validation.error_details
+            if validation.suggested_corrections:
+                state["suggested_corrections"] = validation.suggested_corrections
+            state["validation_tokens"] = tokens
+            state["total_tokens"] += tokens
+
             logger.info("Final validation state:")
-            logger.info(f"Validation status: {state['validation_status']}")
-            logger.info(f"Validation confidence: {state.get('validation_confidence')}")
-            logger.info(f"Validation errors: {state.get('validation_errors')}")
-            logger.info(f"Error message: {state.get('error_message')}")
+            logger.info(f"Status: {state['validation_status']}")
+            logger.info(f"Confidence: {state['validation_confidence']}")
+            if state.get("validation_warnings"):
+                logger.info(f"Warnings: {state['validation_warnings']}")
+            elif state.get("validation_errors"):
+                logger.info(f"Errors: {state['validation_errors']}")
 
             return state
+
         except Exception as e:
             logger.error(f"Validation failed: {str(e)}")
             state["validation_status"] = False
-            state["error_message"] = f"Validation error: {str(e)}"
+            state["validation_confidence"] = 0.0
+            state["validation_errors"] = {"validation_error": str(e)}
             return state

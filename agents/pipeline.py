@@ -6,6 +6,7 @@ import os
 import openai
 from .types import State
 from .utils import preprocess_and_encode_image
+from .VisionOCR import VisionOCRAgent
 from .Doctype import DoctypeAgent
 from .HumanEval import HumanEvalAgent
 from .Passport import PassportAgent
@@ -16,11 +17,10 @@ from .Validation import ValidationAgent
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 def preprocess(state: State) -> State:
     """Preprocess the document image"""
     try:
-        processed_image = preprocess_and_encode_image(state["image_data"])
+        processed_image = preprocess_and_encode_image(state["image_path"])
         state["image_data"] = processed_image
         return state
     except Exception as e:
@@ -39,7 +39,11 @@ def build_pipeline(api_client, save_visualization: bool = False, visualization_p
     """
     workflow = StateGraph(State)
 
-    # Initialize agents with API client
+    # Get Google Cloud API key from environment
+    google_api_key = os.getenv("GOOGLE_API_KEY")
+
+    # Initialize agents
+    vision_agent = VisionOCRAgent(api_client, api_key=google_api_key)
     doctype_agent = DoctypeAgent(api_client)
     passport_agent = PassportAgent(api_client)
     state_id_agent = StateIdAgent(api_client)
@@ -47,7 +51,9 @@ def build_pipeline(api_client, save_visualization: bool = False, visualization_p
     human_eval_agent = HumanEvalAgent(api_client)
     sys_eval_agent = SysEvalAgent(api_client)
 
+    # Add nodes to workflow
     workflow.add_node("preprocess", preprocess)
+    workflow.add_node("OCR", vision_agent.process)
     workflow.add_node("DoctypeAgent", doctype_agent.process)
     workflow.add_node("PassportAgent", passport_agent.process)
     workflow.add_node("StateIdAgent", state_id_agent.process)
@@ -61,28 +67,34 @@ def build_pipeline(api_client, save_visualization: bool = False, visualization_p
         return route
 
     def handle_validation(state: State) -> str:
-        if state["validation_status"]:
+        validation_status = state.get("validation_status", False)
+        validation_confidence = state.get("validation_confidence", 0.0)
+        extraction_attempts = state.get("extraction_attempts", 0)
+        previous_score = state.get("previous_attempt_score", 0.0)
+
+        if validation_status:
             logger.info("Validation successful, routing to evaluation")
             return "evaluate"
-        elif state["extraction_attempts"] < 3:
-            logger.info(f"Validation failed, attempt {state['extraction_attempts']}, retrying extraction")
-            if state.get("previous_attempt_score", 0) >= state.get("validation_confidence", 0):
+        elif extraction_attempts < 3:
+            logger.info(f"Validation failed, attempt {extraction_attempts}, retrying extraction")
+            if previous_score >= validation_confidence:
                 logger.warning("No improvement in validation score, moving to human evaluation")
                 return "HumanEvalAgent"
-            state["previous_attempt_score"] = state.get("validation_confidence", 0)
+            state["previous_attempt_score"] = validation_confidence
             return route_to_extractor(state)
         else:
             logger.info("Max attempts reached, routing to human evaluation")
             return "HumanEvalAgent"
 
-    workflow.add_edge("preprocess", "DoctypeAgent")
+    # Set up workflow edges
+    workflow.set_entry_point("preprocess")
+    workflow.add_edge("preprocess", "OCR")
+    workflow.add_edge("OCR", "DoctypeAgent")
     workflow.add_conditional_edges("DoctypeAgent", route_to_extractor)
     workflow.add_edge("PassportAgent", "validate")
     workflow.add_edge("StateIdAgent", "validate")
     workflow.add_conditional_edges("validate", handle_validation)
     workflow.add_edge("HumanEvalAgent", "evaluate")
-
-    workflow.set_entry_point("preprocess")
 
     if save_visualization:
         try:
@@ -93,6 +105,8 @@ def build_pipeline(api_client, save_visualization: bool = False, visualization_p
             for node_name in workflow.nodes:
                 dot.node(node_name, node_name)
 
+            dot.edge("preprocess", "OCR")
+            dot.edge("OCR", "DoctypeAgent")
             dot.edge("DoctypeAgent", "PassportAgent", "if Passport")
             dot.edge("DoctypeAgent", "StateIdAgent", "if Driver's License")
             dot.edge("PassportAgent", "validate")
@@ -133,10 +147,14 @@ def process_document(
         api_key=api_key
     )
 
-    # Initialize state
-    initial_state = {
-        "image_data": image_path,
+    # Initialize state with all required fields
+    initial_state: State = {
         "image_path": image_path,
+        "image_data": None,
+        "ocr_text": "",
+        "ocr_doc_text": "",
+        "ocr_confidence": 0.0,
+        "ocr_raw_result": {},
         "doc_type": None,
         "detected_state": None,
         "doc_type_confidence": None,

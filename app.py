@@ -63,26 +63,40 @@ if uploaded_file is not None:
                 
                 # Display validation status
                 st.subheader("Validation Results")
-                validation_status = result["final_state"].get("validation_status", False)
-                validation_confidence = result["final_state"].get("validation_confidence", 0.0)
+                final_state = result["final_state"]
+                validation_status = final_state.get("validation_status", False)
+                validation_confidence = final_state.get("validation_confidence", 0.0)
                 
                 status_col1, status_col2 = st.columns(2)
                 with status_col1:
-                    st.metric("Validation Status", "✅ Valid" if validation_status else "❌ Invalid")
+                    if validation_status:
+                        st.metric("Validation Status", "✅ Valid")
+                    else:
+                        st.metric("Validation Status", "❌ Invalid")
                 with status_col2:
                     st.metric("Confidence", f"{validation_confidence:.2%}")
                 
-                # Display any validation errors
-                if result["final_state"].get("validation_errors"):
+                # Display validation warnings if any
+                if final_state.get("validation_warnings"):
+                    st.info("Validation Warnings:")
+                    st.json(final_state["validation_warnings"])
+                
+                # Display validation errors if any
+                if final_state.get("validation_errors"):
                     st.error("Validation Errors:")
-                    st.json(result["final_state"]["validation_errors"])
+                    st.json(final_state["validation_errors"])
+                
+                # Display suggested corrections if any
+                if final_state.get("suggested_corrections"):
+                    st.info("Suggested Improvements:")
+                    st.json(final_state["suggested_corrections"])
                 
                 # Display token usage
                 st.subheader("Processing Statistics")
                 st.json({
-                    "total_tokens": result["final_state"].get("total_tokens", 0),
-                    "extraction_attempts": result["final_state"].get("extraction_attempts", 0),
-                    "document_type": result["final_state"].get("doc_type", "Unknown"),
+                    "total_tokens": final_state.get("total_tokens", 0),
+                    "extraction_attempts": final_state.get("extraction_attempts", 0),
+                    "document_type": final_state.get("doc_type", "Unknown"),
                 })
             else:
                 st.error(f"Error processing document: {result.get('error', 'Unknown error')}")
@@ -115,4 +129,9 @@ with st.sidebar:
     - Extract information
     - Validate data
     - Evaluate accuracy
+    
+    **Validation Notes:**
+    - Documents with confidence ≥ 90% automatically pass validation
+    - Warnings may be shown even for valid documents
+    - Suggested improvements are provided when available
     """) 

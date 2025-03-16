@@ -16,27 +16,31 @@ class APIAgentsClient:
     def __init__(self, client: Fireworks):
         self.client = client
 
-    def call_extraction_api(self, prompt: str, image_base64: str) -> Tuple[dict, int]:
+    def call_extraction_api(self, prompt: str, image_base64: str = None, response_format: dict = None) -> Tuple[dict, int]:
         """API call for document field extraction"""
         message_content = [
-            {"type": "text", "text": prompt},
-            {
+            {"type": "text", "text": prompt}
+        ]
+        
+        if image_base64:
+            message_content.append({
                 "type": "image_url",
                 "image_url": {
                     "url": f"data:image/jpeg;base64,{image_base64}"
                 }
-            },
-        ]
+            })
+            
         messages = [{"role": "user", "content": message_content}]
 
-        response = self.client.chat.completions.create(
-            model="accounts/fireworks/models/llama-v3p2-90b-vision-instruct",
-            messages=messages,
-            response_format={
-                "type": "json_object",
-                "schema": IdentificationResult.model_json_schema()
-            }
-        )
+        kwargs = {
+            "model": "accounts/fireworks/models/llama-v3p2-90b-vision-instruct",
+            "messages": messages
+        }
+        
+        if response_format:
+            kwargs["response_format"] = response_format
+
+        response = self.client.chat.completions.create(**kwargs)
 
         raw_output = response.choices[0].message.content
 

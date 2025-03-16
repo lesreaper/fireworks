@@ -8,6 +8,7 @@ from .Validation import ValidationAgent
 from .HumanEval import HumanEvalAgent
 from .SysEval import SysEvalAgent
 from .pipeline import process_document
+from .VisionOCR import VisionOCRAgent
 
 __all__ = [
     'process_document',
@@ -21,5 +22,6 @@ __all__ = [
     'StateId',
     'ValidationAgent',
     'HumanEvalAgent',
-    'SysEvalAgent'
+    'SysEvalAgent',
+    'VisionOCRAgent'
 ]

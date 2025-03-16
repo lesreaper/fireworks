@@ -1,21 +1,42 @@
-from typing import Optional, Dict, Any, List, TypedDict
+from typing import Optional, Dict, Any, List, TypedDict, Union
 from pydantic import BaseModel
 
 
-class State(TypedDict):
-    image_data: str
+class State(TypedDict, total=False):
+    # Image data
     image_path: str
+    image_data: Optional[str]
+    
+    # OCR results
+    ocr_text: str
+    ocr_doc_text: str
+    ocr_confidence: float
+    ocr_raw_result: Dict[str, Any]
+    
+    # Document type info
     doc_type: Optional[str]
     detected_state: Optional[str]
     doc_type_confidence: Optional[float]
+    
+    # Extraction info
     extraction_attempts: int
     extracted_data: Optional[Dict]
+    
+    # Validation info
     validation_status: bool
-    validation_confidence: Optional[float]
-    validation_errors: Optional[Dict[str, str]]
+    validation_confidence: float
+    previous_attempt_score: float
+    validation_errors: Optional[Dict[str, Any]]
     suggested_corrections: Optional[Dict[str, Any]]
+    
+    # Error handling
     error_message: Optional[str]
+    
+    # Token tracking
     total_tokens: int
+    doc_type_tokens: Optional[int]
+    extraction_tokens: Optional[int]
+    validation_tokens: Optional[int]
 
 
 class PersonName(BaseModel):
@@ -54,7 +75,7 @@ class ValidationResponse(BaseModel):
     """Schema for validation response"""
     is_valid: bool
     confidence: float
-    error_details: Optional[Dict[str, str]] = None
+    error_details: Optional[Dict[str, Union[str, Dict[str, str]]]] = None
     suggested_corrections: Optional[Dict[str, Any]] = None
 
 

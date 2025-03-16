@@ -1,59 +1,93 @@
 import logging
-from .types import State, DocTypeResponse
 from .BaseAgent import BaseAgent
-import json
-from pydantic import ValidationError
+from .types import State, DocTypeResponse
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class DoctypeAgent(BaseAgent):
+    """Agent for detecting document type using OCR output"""
+
     def process(self, state: State) -> State:
-        """Identify the type of document using LLM"""
+        """
+        Process the OCR output to determine document type
+        
+        Args:
+            state: Current state containing OCR results
+            
+        Returns:
+            Updated state with document type information
+        """
         try:
-            prompt = """You are a document analysis expert. Please analyze this image and identify the type of identification document.
+            logger.info("Starting document type detection")
+            logger.info("Available state keys: " + ", ".join(state.keys()))
+            
+            # Ensure we have OCR output
+            if not state.get("ocr_text"):
+                logger.error("No OCR text found in state")
+                logger.error(f"State contents: {state}")
+                raise ValueError("No OCR text available in state")
 
-            Return ONLY a JSON object with the following fields:
+            logger.info(f"OCR text length: {len(state['ocr_text'])}")
+            logger.info(f"OCR doc text length: {len(state['ocr_doc_text'])}")
+            logger.info(f"OCR confidence: {state['ocr_confidence']:.2%}")
+
+            # Construct prompt using OCR results
+            prompt = f"""
+            Please analyze the following text extracted from an identification document and determine its type.
+            The document is either a US Passport or a Driver's License/State ID.
+
+            Raw OCR Text:
+            {state["ocr_text"]}
+
+            Document-Optimized OCR Text:
+            {state["ocr_doc_text"]}
+
+            OCR Confidence: {state["ocr_confidence"]:.2%}
+
+            Please determine:
+            1. If this is a US Passport or Driver's License/State ID
+            2. If it's a Driver's License/State ID, identify which state it's from
+            3. Your confidence level in this identification (0.0 to 1.0)
+
+            Return your analysis in JSON format with:
             - document_type: either "Passport" or "Driver's License"
-            - confidence: a number between 0.0 and 1.0 indicating your confidence
-            - detected_state: two-letter state code if it's a Driver's License (e.g., "CA", "NY")
-            - additional_info: any other relevant details you notice
-
-            Focus on key visual indicators like:
-            - Document layout and format
-            - Official seals or emblems
-            - Header text or document title
-            - State-specific features for Driver's Licenses
+            - confidence: a float between 0.0 and 1.0
+            - detected_state: two-letter state code if applicable
+            - additional_info: any other relevant details
             """
 
-            response = self.call_extraction_api(
+            logger.info("Calling LLM for document type detection")
+            # Call LLM for document type detection
+            response_data, tokens = self.call_extraction_api(
                 prompt=prompt,
-                image_base64=state["image_data"],
-                response_schema=DocTypeResponse.model_json_schema()
+                image_base64=None,  # No need to send image again
+                response_format={"type": "json_object", "schema": DocTypeResponse.model_json_schema()}
             )
 
-            raw_output = response.choices[0].message.content
-            try:
-                parsed_output = json.loads(raw_output)
-                logger.info(f"Received response: {parsed_output}")
-                doc_type_response = DocTypeResponse(**parsed_output)
-            except (json.JSONDecodeError, ValidationError) as e:
-                logger.error(f"Error parsing document type response: {str(e)}")
-                logger.error(f"Raw output was: {raw_output}")
-                raise
+            logger.info(f"Received response from LLM: {response_data}")
 
+            # Parse response and update state
+            doc_type_response = DocTypeResponse(**response_data)
+            
             state["doc_type"] = doc_type_response.document_type
-            if doc_type_response.detected_state:
-                state["detected_state"] = doc_type_response.detected_state
+            state["detected_state"] = doc_type_response.detected_state
             state["doc_type_confidence"] = doc_type_response.confidence
-            state["total_tokens"] += response.usage.total_tokens
+            state["doc_type_tokens"] = tokens
+            state["total_tokens"] += tokens
 
-            if doc_type_response.confidence < 0.7:
-                logger.warning(f"Low confidence in document type detection: {doc_type_response.confidence}")
-
+            logger.info(
+                f"Detected document type: {state['doc_type']} "
+                f"(State: {state['detected_state']}) "
+                f"with confidence: {state['doc_type_confidence']:.2%}"
+            )
+            
+            # Log final state
+            logger.info("Final state keys: " + ", ".join(state.keys()))
             return state
+
         except Exception as e:
-            logger.error(f"Document type detection failed: {str(e)}")
+            logger.error(f"Error in document type detection: {str(e)}")
+            logger.error(f"State at error: {state}")
             state["error_message"] = f"Document type detection error: {str(e)}"
             return state
