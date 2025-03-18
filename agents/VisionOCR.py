@@ -124,7 +124,7 @@ class VisionOCRAgent(BaseAgent):
             final_confidence = doc_confidence if doc_text else text_confidence
             
             logger.info(f"Extracted text length: {len(final_text)} characters")
-            logger.info(f"Text sample: {final_text[:200]}...")
+            logger.info(f"Text sample: {final_text[:1000]}...")
             
             # Update state with clean OCR results
             state.update({

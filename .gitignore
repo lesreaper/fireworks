@@ -1,3 +1,5 @@
 .env
 firectl
 firectl.*
+.gitignore
+synthetic_passports/

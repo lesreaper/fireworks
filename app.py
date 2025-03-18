@@ -66,6 +66,10 @@ if uploaded_file is not None:
                 final_state = result["final_state"]
                 validation_status = final_state.get("validation_status", False)
                 validation_confidence = final_state.get("validation_confidence", 0.0)
+                doc_type = final_state.get("doc_type", "Unknown")
+                
+                # Debug: Print the entire state
+                st.write("Debug - State:", final_state)
                 
                 status_col1, status_col2 = st.columns(2)
                 with status_col1:
@@ -76,27 +80,69 @@ if uploaded_file is not None:
                 with status_col2:
                     st.metric("Confidence", f"{validation_confidence:.2%}")
                 
-                # Display validation warnings if any
-                if final_state.get("validation_warnings"):
-                    st.info("Validation Warnings:")
-                    st.json(final_state["validation_warnings"])
+                # Display validation warnings and errors
+                if validation_status and validation_confidence >= 0.9:
+                    st.info(f"### {doc_type} Validation Notes")
+                    
+                    # First try to get warnings directly from result, which should contain preserved warnings
+                    warnings = (
+                        result.get("validation_warnings") or
+                        final_state.get("validation_warnings") or
+                        {}
+                    )
+                    
+                    # Debug: print warnings to see what we're working with
+                    st.write("DEBUG - Available warnings:", warnings)
+                    
+                    if warnings:
+                        st.info("The following notes were found but did not affect validation:")
+                        if isinstance(warnings, dict):
+                            for field, warning in warnings.items():
+                                st.info(f"**{field}**: {warning}")
+                        elif isinstance(warnings, str):
+                            st.info(warnings)
+                        else:
+                            st.info(f"Unexpected warning type: {type(warnings)}")
+                    else:
+                        st.info("No warnings - all fields are properly formatted.")
+                elif final_state.get("validation_errors"):
+                    st.error(f"### {doc_type} Validation Errors")
+                    st.error("The following issues need to be addressed:")
+                    errors = final_state.get("validation_errors", {})
+                    if isinstance(errors, dict):
+                        for field, error in errors.items():
+                            st.error(f"**{field}**: {error}")
+                    else:
+                        st.error(str(errors))
                 
-                # Display validation errors if any
-                if final_state.get("validation_errors"):
-                    st.error("Validation Errors:")
-                    st.json(final_state["validation_errors"])
-                
-                # Display suggested corrections if any
-                if final_state.get("suggested_corrections"):
-                    st.info("Suggested Improvements:")
-                    st.json(final_state["suggested_corrections"])
+                # Display suggested corrections
+                suggested_corrections = (
+                    final_state.get("suggested_corrections") or 
+                    final_state.get("metrics", {}).get("suggested_corrections") or 
+                    {}
+                )
+                if suggested_corrections:
+                    st.info(f"### Suggested Improvements for {doc_type}")
+                    st.markdown("""
+                    The following improvements are suggested to meet formatting requirements:
+                    """)
+                    if isinstance(suggested_corrections, dict):
+                        for field, correction in suggested_corrections.items():
+                            if isinstance(correction, dict):
+                                st.info(f"**{field}**:")
+                                for subfield, value in correction.items():
+                                    st.info(f"- {subfield}: {value}")
+                            else:
+                                st.info(f"**{field}**: {correction}")
+                    else:
+                        st.json(suggested_corrections)
                 
                 # Display token usage
                 st.subheader("Processing Statistics")
                 st.json({
+                    "document_type": doc_type,
                     "total_tokens": final_state.get("total_tokens", 0),
                     "extraction_attempts": final_state.get("extraction_attempts", 0),
-                    "document_type": final_state.get("doc_type", "Unknown"),
                 })
             else:
                 st.error(f"Error processing document: {result.get('error', 'Unknown error')}")
@@ -133,5 +179,6 @@ with st.sidebar:
     **Validation Notes:**
     - Documents with confidence ≥ 90% automatically pass validation
     - Warnings may be shown even for valid documents
+    - Document-specific validation rules are applied
     - Suggested improvements are provided when available
     """) 

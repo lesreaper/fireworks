@@ -101,18 +101,27 @@ class ValidationAgent(BaseAgent):
                 # Convert any errors to warnings if we're auto-passing
                 if validation.error_details:
                     state["validation_warnings"] = validation.error_details
-                    validation.error_details = None
+                    validation.error_details = None  # Clear errors since we're auto-passing
+                    logger.info(f"Converted errors to warnings: {state['validation_warnings']}")
 
             # Update state with validation results
             state["validation_status"] = validation.is_valid
             state["validation_confidence"] = validation.confidence
+            
+            # Make sure warnings are preserved in the state
             if validation.error_details:
-                state["validation_errors"] = validation.error_details
+                if validation.confidence >= 0.9:
+                    state["validation_warnings"] = validation.error_details
+                else:
+                    state["validation_errors"] = validation.error_details
+            
             if validation.suggested_corrections:
                 state["suggested_corrections"] = validation.suggested_corrections
+                
             state["validation_tokens"] = tokens
             state["total_tokens"] += tokens
 
+            # Log final state for debugging
             logger.info("Final validation state:")
             logger.info(f"Status: {state['validation_status']}")
             logger.info(f"Confidence: {state['validation_confidence']}")
@@ -120,6 +129,10 @@ class ValidationAgent(BaseAgent):
                 logger.info(f"Warnings: {state['validation_warnings']}")
             elif state.get("validation_errors"):
                 logger.info(f"Errors: {state['validation_errors']}")
+
+            # Make sure warnings are preserved in the final state
+            if "validation_warnings" not in state:
+                state["validation_warnings"] = {}
 
             return state
 

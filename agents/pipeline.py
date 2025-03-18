@@ -29,7 +29,7 @@ def preprocess(state: State) -> State:
         return state
 
 
-def build_pipeline(api_client, save_visualization: bool = False, visualization_path: str = "workflow.png") -> Graph:
+def build_pipeline(api_client, save_visualization: bool = True, visualization_path: str = "workflow.png") -> Graph:
     """Build the document processing pipeline with optional visualization
 
     Args:

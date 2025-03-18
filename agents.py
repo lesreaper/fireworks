@@ -160,13 +160,40 @@ def process_document(
         pipeline = build_pipeline(client, save_visualization, visualization_path)
         result = pipeline.invoke(initial_state)
 
+        # Explicitly preserve validation warnings and suggested corrections
+        validation_warnings = None
+        suggested_corrections = None
+        
+        # Preserve validation information across state transitions
+        for node_name, node_state in result.items():
+            if node_state and isinstance(node_state, dict):
+                if node_state.get("validation_warnings"):
+                    validation_warnings = node_state["validation_warnings"]
+                if node_state.get("suggested_corrections"):
+                    suggested_corrections = node_state["suggested_corrections"]
+        
+        # Make sure these are in the evaluate node state
+        if "evaluate" in result and isinstance(result["evaluate"], dict):
+            if validation_warnings:
+                result["evaluate"]["validation_warnings"] = validation_warnings
+            if suggested_corrections:
+                result["evaluate"]["suggested_corrections"] = suggested_corrections
+        
+        # Also make sure they're in our final result
+        if validation_warnings:
+            result["validation_warnings"] = validation_warnings
+        if suggested_corrections:
+            result["suggested_corrections"] = suggested_corrections
+
         metrics = result.get("evaluate")
 
         return {
             "status": "success",
             "metrics": metrics,
             "visualization_path": visualization_path if save_visualization else None,
-            "final_state": result
+            "final_state": result,
+            "validation_warnings": validation_warnings,
+            "suggested_corrections": suggested_corrections
         }
 
     except Exception as e:

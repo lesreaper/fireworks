@@ -1,0 +1,60 @@
+{
+  "time_taken": 8.37136197090149,
+  "images_processed": 1,
+  "pass_rate": 1.0,
+  "error_rate": 0.0,
+  "passed_images": 1,
+  "failed_images": 0,
+  "error_images": 0,
+  "timestamp": "2025-03-18T10:54:31.832657",
+  "details": [
+    {
+      "filename": "passport_32e95050-6e10-49e5-9608-6561626c9dc6.jpg",
+      "accuracy": 1.0,
+      "passed": true,
+      "field_accuracies": {
+        "document_type": 1.0,
+        "document_number": 1.0,
+        "first_name": 1.0,
+        "last_name": 1.0,
+        "date_of_birth": 1.0,
+        "issue_date": 1.0,
+        "expiry_date": 1.0,
+        "nationality": 1.0
+      },
+      "extracted_data": {
+        "document_type": "Passport",
+        "document_number": "208134839",
+        "name": {
+          "first_name": "ANDREW",
+          "middle_name": "MICHELLE",
+          "last_name": "WINTERS"
+        },
+        "date_of_birth": "10/20/1988",
+        "issue_date": "07/30/2020",
+        "expiry_date": "10/13/2032",
+        "address": {
+          "street": "JEREMYSTAD",
+          "city": "JEREMYSTAD",
+          "state": "USA",
+          "zip_code": "USA"
+        },
+        "nationality": "USA",
+        "state": "USA"
+      },
+      "ground_truth": {
+        "filename": "passport_32e95050-6e10-49e5-9608-6561626c9dc6.jpg",
+        "document_type": "Passport",
+        "document_number": "208134839",
+        "first_name": "ANDREW",
+        "last_name": "WINTERS",
+        "date_of_birth": "20 OCT 1988",
+        "issue_date": "30 JUL 2020",
+        "expiry_date": "13 OCT 2032",
+        "nationality": "USA",
+        "gender": "M",
+        "place_of_birth": "JEREMYSTAD, USA"
+      }
+    }
+  ]
+}

@@ -11,7 +11,7 @@ class PassportAgent(BaseAgent):
     def process(self, state: State) -> State:
         """Process the passport and extract information"""
         try:
-            logger.info("Starting passport extraction with state:")
+            logger.info("Starting passport extraction:")
             logger.info(f"Current extraction attempts: {state['extraction_attempts']}")
             
             # Get the OCR text

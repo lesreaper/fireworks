@@ -1,5 +1,5 @@
 import logging
-from .types import EvaluationMetrics
+from .types import State, EvaluationMetrics
 from .BaseAgent import BaseAgent
 from typing import Dict, Any
 import json
@@ -28,7 +28,7 @@ class SysEvalAgent(BaseAgent):
             logger.error(f"Error loading ground truth data: {str(e)}")
             return {}
 
-    def process(self, state: Dict[str, Any]) -> EvaluationMetrics:
+    def process(self, state: State) -> State:
         """Evaluate the extraction and validation results"""
         try:
             # Get the filename from the path
@@ -39,7 +39,7 @@ class SysEvalAgent(BaseAgent):
             ground_truth = self.ground_truth.get(filename)
             if not ground_truth:
                 logger.error(f"No ground truth found for file: {filename}")
-                # Preserve validation status and confidence from previous state
+                # Create basic metrics
                 metrics = EvaluationMetrics(
                     precision=0.0,
                     recall=0.0,
@@ -64,7 +64,12 @@ class SysEvalAgent(BaseAgent):
                         "validation": state.get("validation_confidence", 0.0)
                     }
                 )
-                return metrics
+                
+                # Update state with metrics
+                state["metrics"] = metrics.model_dump()
+                
+                # Return the complete state
+                return state
 
             # Calculate metrics here...
             # For now, just return basic metrics
@@ -92,12 +97,17 @@ class SysEvalAgent(BaseAgent):
                     "validation": state.get("validation_confidence", 0.0)
                 }
             )
-
-            return metrics
+            
+            # Update state with metrics
+            state["metrics"] = metrics.model_dump()
+            
+            # Return the complete state
+            return state
 
         except Exception as e:
             logger.error(f"Evaluation failed: {str(e)}")
-            raise
+            state["error_message"] = f"Evaluation error: {str(e)}"
+            return state
 
     def _calculate_field_stats(self, ground_truth: Dict, extracted_data: Dict) -> Dict:
         """Calculate per-field statistics"""

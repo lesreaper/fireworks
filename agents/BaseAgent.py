@@ -26,9 +26,9 @@ class BaseAgent:
             })
 
         completion_args = {
-            "model": "accounts/fireworks/models/llama-v3p2-90b-vision-instruct",
+            "model": "accounts/fireworks/models/llama-v3p1-405b-instruct",
             "messages": [{"role": "user", "content": message_content}],
-            "temperature": 0.1  # Lower temperature for more consistent outputs
+            "temperature": 0.1
         }
 
         if response_format:
