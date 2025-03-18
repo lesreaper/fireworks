@@ -1,9 +1,10 @@
 from google.cloud import vision
 import logging
-from typing import Dict, List, Any
+from typing import Dict, Any
 import io
 
 logger = logging.getLogger(__name__)
+
 
 class VisionAPI:
     def __init__(self):
@@ -18,10 +19,10 @@ class VisionAPI:
     def extract_text(self, image_path: str) -> Dict[str, Any]:
         """
         Extract text from an image using Google Cloud Vision API
-        
+
         Args:
             image_path: Path to the image file
-            
+
         Returns:
             Dictionary containing:
                 - full_text: Complete extracted text
@@ -29,13 +30,11 @@ class VisionAPI:
                 - confidence: Overall confidence score
         """
         try:
-            # Read the image file
             with io.open(image_path, 'rb') as image_file:
                 content = image_file.read()
 
             image = vision.Image(content=content)
 
-            # Perform text detection
             response = self.client.text_detection(image=image)
             texts = response.text_annotations
 
@@ -47,12 +46,10 @@ class VisionAPI:
                     "confidence": 0.0
                 }
 
-            # Extract the full text (first element contains all text)
             full_text = texts[0].description
 
-            # Extract individual text blocks with their positions
             blocks = []
-            for text in texts[1:]:  # Skip the first element as it's the full text
+            for text in texts[1:]:
                 vertices = [(vertex.x, vertex.y) for vertex in text.bounding_poly.vertices]
                 blocks.append({
                     "text": text.description,
@@ -60,7 +57,6 @@ class VisionAPI:
                     "bounds": vertices
                 })
 
-            # Calculate average confidence
             confidences = [block["confidence"] for block in blocks if block["confidence"] is not None]
             avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
 
@@ -80,10 +76,10 @@ class VisionAPI:
     def detect_document(self, image_path: str) -> Dict[str, Any]:
         """
         Perform document text detection using Google Cloud Vision API
-        
+
         Args:
             image_path: Path to the image file
-            
+
         Returns:
             Dictionary containing structured document information
         """
@@ -132,8 +128,7 @@ class VisionAPI:
                             para_data["words"].append({
                                 "text": word_text,
                                 "confidence": word.confidence,
-                                "bounds": [(vertex.x, vertex.y) 
-                                         for vertex in word.bounding_box.vertices]
+                                "bounds": [(vertex.x, vertex.y) for vertex in word.bounding_box.vertices]
                             })
 
                         block_data["text"] += para_text
@@ -154,21 +149,16 @@ class VisionAPI:
         """
         Perform comprehensive document analysis including text detection,
         layout analysis, and entity extraction
-        
+
         Args:
             image_path: Path to the image file
-            
+
         Returns:
             Dictionary containing comprehensive document analysis
         """
         try:
-            # Get basic text extraction
             text_result = self.extract_text(image_path)
-            
-            # Get detailed document analysis
             doc_result = self.detect_document(image_path)
-            
-            # Combine results
             result = {
                 "text_extraction": text_result,
                 "document_analysis": doc_result,
@@ -178,10 +168,10 @@ class VisionAPI:
                     "overall_confidence": (text_result["confidence"] + doc_result["confidence"]) / 2
                 }
             }
-            
-            logger.info(f"Successfully performed comprehensive document analysis")
+
+            logger.info("Successfully performed comprehensive document analysis")
             return result
 
         except Exception as e:
             logger.error(f"Error performing document analysis: {str(e)}")
-            raise 
+            raise

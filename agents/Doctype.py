@@ -11,18 +11,17 @@ class DoctypeAgent(BaseAgent):
     def process(self, state: State) -> State:
         """
         Process the OCR output to determine document type
-        
+
         Args:
             state: Current state containing OCR results
-            
+
         Returns:
             Updated state with document type information
         """
         try:
             logger.info("Starting document type detection")
             logger.info("Available state keys: " + ", ".join(state.keys()))
-            
-            # Ensure we have OCR output
+
             if not state.get("ocr_text"):
                 logger.error("No OCR text found in state")
                 logger.error(f"State contents: {state}")
@@ -32,7 +31,6 @@ class DoctypeAgent(BaseAgent):
             logger.info(f"OCR doc text length: {len(state['ocr_doc_text'])}")
             logger.info(f"OCR confidence: {state['ocr_confidence']:.2%}")
 
-            # Construct prompt using OCR results
             prompt = f"""
             Please analyze the following text extracted from an identification document and determine its type.
             The document is either a US Passport or a Driver's License/State ID.
@@ -58,10 +56,9 @@ class DoctypeAgent(BaseAgent):
             """
 
             logger.info("Calling LLM for document type detection")
-            # Call LLM for document type detection
             response_data, tokens = self.call_extraction_api(
                 prompt=prompt,
-                image_base64=None,  # No need to send image again
+                image_base64=None,
                 response_format={"type": "json_object", "schema": DocTypeResponse.model_json_schema()}
             )
 
@@ -69,7 +66,7 @@ class DoctypeAgent(BaseAgent):
 
             # Parse response and update state
             doc_type_response = DocTypeResponse(**response_data)
-            
+
             state["doc_type"] = doc_type_response.document_type
             state["detected_state"] = doc_type_response.detected_state
             state["doc_type_confidence"] = doc_type_response.confidence
@@ -81,8 +78,7 @@ class DoctypeAgent(BaseAgent):
                 f"(State: {state['detected_state']}) "
                 f"with confidence: {state['doc_type_confidence']:.2%}"
             )
-            
-            # Log final state
+
             logger.info("Final state keys: " + ", ".join(state.keys()))
             return state
 

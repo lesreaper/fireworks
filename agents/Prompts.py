@@ -33,6 +33,7 @@ Return the extracted information in the following JSON format:
 }
 """
 
+# If there's a general extraction prompt that handles multiple document types, update it too
 GENERAL_EXTRACTION_PROMPT = """
 Extract information from the provided document image.
 
@@ -60,4 +61,4 @@ For Driver's License documents:
 
 Return the extracted information in JSON format with the appropriate fields for the detected document type.
 For passports, include 'place_of_birth' field instead of 'address'.
-""" 
+"""

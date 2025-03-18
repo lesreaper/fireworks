@@ -2,25 +2,25 @@
 
 This project demonstrates a few end-to-end proof-of-concepts for extracting structured information from images of U.S. identification documents (drivers licenses, state IDs, and passports) using Fireworks AI.
 
-## To Run
+## To Run Apps
 ```
 streamlit run app.py
+stremalit run test_passports.py
 ```
 
 ## What's Inside
-There are 2 Document Inlining and a JSON Structured Response that are used n the main docker container.
+This is an agentic workflow for OCR processing. It sends the image ot Google for OCR, and then back to the DocType Operator to start the pipeline. You can see the approximate path below.
 
-I also built out a sample agent using LangGraph with the following setup.
-![worflow](workflow.png). Unfortunately, I ran out of time before making it robust or dockerized, or using more than 1 image. There's a LOT to fix on the agent setup, including using a better data cleanup. the validation and evaluation scores would drastically increase. This is a perfect use case for a vertical and agents.
+![worflow](workflow.png)
+
+I attempted to fine tune a VLM, starting with Qwen2.5 VL and Donut. Unfortunately, but ran out of time for experimentation. Optimally, we can create a small 7B or 32B custom agent per state and passport card and doc, which would drastically reduce costs and increase performance.
 
 ## Quick Notes
 - The goal here was to be able to show a client some of the cool things unique to the Fireworks AI, including the document inlining and structured response integration. The goal was to show the unique adds here for structured data extraction.
-- Showing the number of tokens used and costs, along with evals, is a good way to show cost/benefit to solutions
-- If I had another day, I could get the agent working way better. It was the last thing I attempted
 - I didn't batch the images, but that could have easily been done with the Fireworks API. Normally, that would reduce costs.
-- YES, I used AI in a lot of the coding work, but I understand EVERYTHING that is going on here, it's just for speed
-- I tested out standard OCR as a baselines, which uses OpenCV. I was surprised it didn't help, especially reducing the file size
+- YES, I used AI in a bunch of the coding work, but I understand EVERYTHING that is going on here, it's just for speed
 - I would rather use URLs than Base64 (Base64 adds 30% to filze size over the wire), but that's what made it work here
+- Fine tuned smaller models would handle the image space structure better probably, reduce cost, and could be more effective
 
 ## Key Features in Document Inlining
 
@@ -30,7 +30,7 @@ I also built out a sample agent using LangGraph with the following setup.
 - **JSON Mode Structured Responses:**  
   We use Fireworks AI’s [JSON Mode](https://docs.fireworks.ai/structured-responses/structured-response-formatting) to instruct the model to return results in a well-structured JSON format. This allows easy validation and further processing of the extracted data.
 
-## Setup and Installation for Docker
+## Setup and Installation (Docker removed for now)
 
 1. **Clone the repository:**
 
@@ -42,46 +42,27 @@ I also built out a sample agent using LangGraph with the following setup.
 
     ```bash
     touch .env
-    echo "FIREWORKS_API_KEY=your_api_key_here" > .env
+    ```
+    Add these values to your `.env`:
+    ```
+    BASE_URL="https://api.fireworks.ai/inference/v1"
+    FIREWORKS_API_KEY="xxxx"
+    GOOGLE_API_KEY="xxxx"
     ```
 
-3. **Run the docker container:**
+3. **Run the apps:**
 
-    ```bash
-    docker compose up --build --force-recreate
     ```
+    pip install -r requirements.txt
+    ```
+    To run the single image test:
+    ```
+    streamlit run app.py
+    ```
+    To run the multimage testing, you'll need to have images installed in `synthetic_passports`, along with an appropriate `jsonl` file. You can use the `generate_passports.py` file under the `fine_tuning` folder to select a template (hard coded), and then it should populate. From there, you simply come back, and run:
+    ```
+    streamlit run test_passports.py
+    ```
+    
 
-## Setup and Installation for Agents
-
-You'll have to set up the virtual environment and run it from there.
-
-`pip install -r requirements.txt`
-
-`python agents.py`
-
-## Evaluation
-
-### Document Inlining
-The project includes a script to compare the extracted results against ground truth data (stored in actual_results.json) and compute evaluation metrics such as precision, recall, and F1 scores.
-
-Average results without OpenCV Preprocessing (best):
-```
-Total tokens used for all images: 10745
-Approximate cost: $ 1.0745
-Precision: 0.480
-Recall:    0.600
-F1 Score:  0.533
-```
-### Agentic Approach
-The agentic approach worked out really well in terms of an initial pass. The goal was to set up an agent for each state in the extraction, but that didn't happen. Here are the results however:
-```
-=== OVERALL IMAGE METRICS ===
-Image Precision: 1.000
-Image Recall: 0.538
-Image F1 Score: 0.700
-Correct Fields: 7
-Total Predicted Fields: 7
-Total Actual Fields: 13
-===========================
-```
 

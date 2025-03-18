@@ -1,7 +1,7 @@
 import logging
 from .types import State, EvaluationMetrics
 from .BaseAgent import BaseAgent
-from typing import Dict, Any
+from typing import Dict
 import json
 import os
 
@@ -64,15 +64,11 @@ class SysEvalAgent(BaseAgent):
                         "validation": state.get("validation_confidence", 0.0)
                     }
                 )
-                
-                # Update state with metrics
+
                 state["metrics"] = metrics.model_dump()
-                
-                # Return the complete state
+
                 return state
 
-            # Calculate metrics here...
-            # For now, just return basic metrics
             metrics = EvaluationMetrics(
                 precision=0.95,
                 recall=0.95,
@@ -97,11 +93,9 @@ class SysEvalAgent(BaseAgent):
                     "validation": state.get("validation_confidence", 0.0)
                 }
             )
-            
-            # Update state with metrics
+
             state["metrics"] = metrics.model_dump()
-            
-            # Return the complete state
+
             return state
 
         except Exception as e:
@@ -153,7 +147,6 @@ class SysEvalAgent(BaseAgent):
         accuracy = total_correct / total_fields if total_fields > 0 else 0.0
         error_rate = 1.0 - accuracy
 
-        # Calculate overall precision, recall, and F1
         precisions = [stats["precision"] for stats in field_stats.values()]
         recalls = [stats["recall"] for stats in field_stats.values()]
 
@@ -161,7 +154,6 @@ class SysEvalAgent(BaseAgent):
         recall = sum(recalls) / len(recalls) if recalls else 0.0
         f1_score = (2 * precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
 
-        # Get process statistics
         processing_stats = {
             "extraction_attempts": state.get("extraction_attempts", 0),
             "total_tokens": state.get("total_tokens", 0),
@@ -169,7 +161,6 @@ class SysEvalAgent(BaseAgent):
             "validation_status": state.get("validation_status", False)
         }
 
-        # Token usage
         token_usage = {
             "total": state.get("total_tokens", 0),
             "doc_type_detection": state.get("doc_type_tokens", 0),
@@ -177,7 +168,6 @@ class SysEvalAgent(BaseAgent):
             "validation": state.get("validation_tokens", 0)
         }
 
-        # Confidence scores
         confidence_scores = {
             "document_type": state.get("doc_type_confidence", 0.0),
             "validation": state.get("validation_confidence", 0.0)

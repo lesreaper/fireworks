@@ -17,6 +17,7 @@ from .Validation import ValidationAgent
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def preprocess(state: State) -> State:
     """Preprocess the document image"""
     try:
@@ -39,10 +40,8 @@ def build_pipeline(api_client, save_visualization: bool = True, visualization_pa
     """
     workflow = StateGraph(State)
 
-    # Get Google Cloud API key from environment
     google_api_key = os.getenv("GOOGLE_API_KEY")
 
-    # Initialize agents
     vision_agent = VisionOCRAgent(api_client, api_key=google_api_key)
     doctype_agent = DoctypeAgent(api_client)
     passport_agent = PassportAgent(api_client)
@@ -51,7 +50,6 @@ def build_pipeline(api_client, save_visualization: bool = True, visualization_pa
     human_eval_agent = HumanEvalAgent(api_client)
     sys_eval_agent = SysEvalAgent(api_client)
 
-    # Add nodes to workflow
     workflow.add_node("preprocess", preprocess)
     workflow.add_node("OCR", vision_agent.process)
     workflow.add_node("DoctypeAgent", doctype_agent.process)
@@ -147,7 +145,6 @@ def process_document(
         api_key=api_key
     )
 
-    # Initialize state with all required fields
     initial_state: State = {
         "image_path": image_path,
         "image_data": None,
@@ -191,4 +188,5 @@ def process_document(
             "status": "error",
             "error": str(e),
             "visualization_path": visualization_path if save_visualization else None
-        } 
+        }
+

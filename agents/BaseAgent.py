@@ -17,7 +17,6 @@ class BaseAgent:
         if not self.api_client:
             raise ValueError("API client not initialized")
 
-        # Construct message content based on whether we have an image
         message_content = [{"type": "text", "text": prompt}]
         if image_base64:
             message_content.append({
@@ -37,8 +36,7 @@ class BaseAgent:
         try:
             response = self.api_client.chat.completions.create(**completion_args)
             content = response.choices[0].message.content
-            
-            # Parse JSON response
+
             try:
                 parsed_content = json.loads(content)
                 logger.debug(f"Parsed API response: {parsed_content}")
@@ -46,7 +44,7 @@ class BaseAgent:
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse API response as JSON: {content}")
                 raise ValueError(f"API returned invalid JSON: {str(e)}")
-                
+
         except Exception as e:
             logger.error(f"API call failed: {str(e)}")
             raise
@@ -59,7 +57,7 @@ class BaseAgent:
         completion_args = {
             "model": "accounts/fireworks/models/llama-v3p3-70b-instruct",
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.1,  # Lower temperature for more consistent outputs
+            "temperature": 0.1,
             "response_format": {"type": "json_object"}
         }
 
@@ -69,8 +67,7 @@ class BaseAgent:
         try:
             response = self.api_client.chat.completions.create(**completion_args)
             content = response.choices[0].message.content
-            
-            # Parse JSON response
+
             try:
                 parsed_content = json.loads(content)
                 logger.debug(f"Parsed validation response: {parsed_content}")
@@ -78,7 +75,7 @@ class BaseAgent:
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse validation API response as JSON: {content}")
                 raise ValueError(f"Validation API returned invalid JSON: {str(e)}")
-                
+
         except Exception as e:
             logger.error(f"Validation API call failed: {str(e)}")
             raise
