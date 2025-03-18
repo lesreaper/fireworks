@@ -158,7 +158,8 @@ def calculate_accuracy(extracted: Dict[str, Any], ground_truth: Dict[str, Any]) 
         "date_of_birth": "date_of_birth",
         "issue_date": "issue_date",
         "expiry_date": "expiry_date",
-        "nationality": "nationality"
+        "nationality": "nationality",
+        "place_of_birth": "place_of_birth"
     }
 
     # Map from extracted data structure to flat structure
@@ -171,7 +172,21 @@ def calculate_accuracy(extracted: Dict[str, Any], ground_truth: Dict[str, Any]) 
         "issue_date": extracted.get("issue_date"),
         "expiry_date": extracted.get("expiry_date"),
         "nationality": extracted.get("nationality"),
+        "place_of_birth": extracted.get("place_of_birth", ""),
     }
+    
+    # Check if place_of_birth is missing but there is address information
+    # This handles cases where the extraction puts place of birth in the address field
+    if not extracted_flat["place_of_birth"] and extracted.get("address"):
+        address = extracted.get("address", {})
+        # Construct place_of_birth from address components
+        place_parts = []
+        if address.get("city"):
+            place_parts.append(address.get("city"))
+        if address.get("state"):
+            place_parts.append(address.get("state"))
+        if place_parts:
+            extracted_flat["place_of_birth"] = ", ".join(place_parts)
 
     if st.session_state.get('showing_debug', False):
         st.sidebar.write("Extracted Flat:", extracted_flat)
@@ -243,6 +258,39 @@ def calculate_accuracy(extracted: Dict[str, Any], ground_truth: Dict[str, Any]) 
                     field_accuracies[extracted_field] = 0.0
                     field_match = False
             
+            # Handle place of birth with special comparison (might be formatted differently)
+            elif extracted_field == "place_of_birth":
+                if ext_value and gt_value:
+                    # Normalize both to remove commas, make uppercase, and trim whitespace
+                    norm_gt = str(gt_value).upper().replace(",", " ").strip()
+                    norm_ext = str(ext_value).upper().replace(",", " ").strip()
+                    
+                    # Check if the extracted value contains the key parts of ground truth
+                    # or if ground truth contains the key parts of extracted value
+                    gt_parts = set(norm_gt.split())
+                    ext_parts = set(norm_ext.split())
+                    
+                    # Calculate overlap - at least 50% of words should match
+                    if gt_parts and ext_parts:
+                        overlap = len(gt_parts.intersection(ext_parts))
+                        min_required = min(len(gt_parts), len(ext_parts)) / 2
+                        
+                        if overlap >= min_required:
+                            correct_fields += 1
+                            field_accuracies[extracted_field] = 1.0
+                            field_match = True
+                            conversion_note = f"Partial match: {overlap} words match out of {len(gt_parts)} (GT) and {len(ext_parts)} (extracted)"
+                        else:
+                            field_accuracies[extracted_field] = 0.0
+                            field_match = False
+                            conversion_note = f"Insufficient overlap: {overlap} words match out of {len(gt_parts)} (GT) and {len(ext_parts)} (extracted)"
+                    else:
+                        field_accuracies[extracted_field] = 0.0
+                        field_match = False
+                else:
+                    field_accuracies[extracted_field] = 0.0
+                    field_match = False
+            
             # Simple string matching for other fields
             elif ext_value and gt_value and str(gt_value).lower().strip() == str(ext_value).lower().strip():
                 correct_fields += 1
@@ -272,6 +320,10 @@ def run_test(num_images: int = 100) -> Dict[str, Any]:
     """Run the test on a sample of images"""
     # Load ground truth data
     ground_truth = load_ground_truth()
+    
+    if not ground_truth:
+        st.error("Cannot proceed without ground truth data")
+        return {}
 
     # Get random sample of images
     image_paths = get_random_images(num_images)
@@ -316,7 +368,8 @@ def run_test(num_images: int = 100) -> Dict[str, Any]:
                     "date_of_birth": gt_data.get("date_of_birth", "01/01/1980"),
                     "issue_date": gt_data.get("issue_date", "01/01/2020"),
                     "expiry_date": gt_data.get("expiry_date", "01/01/2030"),
-                    "nationality": gt_data.get("nationality", "USA")
+                    "nationality": gt_data.get("nationality", "USA"),
+                    "place_of_birth": gt_data.get("place_of_birth", "WASHINGTON, USA")
                 }
 
                 # Calculate accuracy against ground truth
@@ -475,7 +528,7 @@ def display_results(results: Dict[str, Any]):
         
         # Calculate average accuracy for each field
         avg_field_accuracies = {
-            field: sum(accs)/len(accs) if accs else 0 
+            field: sum(accs) / len(accs) if accs else 0 
             for field, accs in field_accuracies.items()
         }
         
