@@ -13,15 +13,6 @@ This is an agentic workflow for OCR processing. It sends the image ot Google for
 
 ![worflow](workflow.png)
 
-I attempted to fine tune a VLM, starting with Qwen2.5 VL and Donut. Unfortunately, but ran out of time for experimentation. Optimally, we can create a small 7B or 32B custom agent per state and passport card and doc, which would drastically reduce costs and increase performance.
-
-## Quick Notes
-- The goal here was to be able to show a client some of the cool things unique to the Fireworks AI, including the document inlining and structured response integration. The goal was to show the unique adds here for structured data extraction.
-- I didn't batch the images, but that could have easily been done with the Fireworks API. Normally, that would reduce costs.
-- YES, I used AI in a bunch of the coding work, but I understand EVERYTHING that is going on here, it's just for speed
-- I would rather use URLs than Base64 (Base64 adds 30% to filze size over the wire), but that's what made it work here
-- Fine tuned smaller models would handle the image space structure better probably, reduce cost, and could be more effective
-
 ## Key Features in Document Inlining
 
 - **Document Inlining:**  
